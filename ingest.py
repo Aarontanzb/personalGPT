@@ -11,6 +11,12 @@ from langchain.document_loaders import (
     UnstructuredWordDocumentLoader,
 )
 
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.vectorstores import Chroma
+from langchain.embeddings import HuggingFaceEmbeddings
+from langchain.docstore.document import Document
+from constants import CHROMA_SETTINGS
+
 LOADER_MAPPING = {
     ".csv": (CSVLoader, {}),
     ".doc": (UnstructuredWordDocumentLoader, {}),
@@ -22,10 +28,11 @@ LOADER_MAPPING = {
     ".ppt": (UnstructuredPowerPointLoader, {}),
     ".pptx": (UnstructuredPowerPointLoader, {}),
     ".txt": (TextLoader, {"encoding": "utf8"}),
-    # Add more mappings for other file extensions and loaders as needed
 }
 
 
+
+# Load all documents from the source_documents folder
 def process_documents():
     source_folder = "source_documents"
     documents = []
@@ -37,5 +44,32 @@ def process_documents():
             loader = loader_cls(file_path, **loader_kwargs)
             loaded_documents = loader.load()
             documents.extend(loaded_documents)
-    return documents
+        else:
+            print(f"Skipping {file_path} as it has no loader")
+    
+    # Split documents into chunks
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    texts = text_splitter.split_documents(documents)
+    return texts
 
+
+# Create embeddings for all documents
+def main():
+    embeddings = HuggingFaceEmbeddings(model_name="hkunlp/instructor-xl",
+        model_kwargs={"device": "cuda"},)
+    
+    texts = process_documents()
+
+    db = Chroma.from_documents(
+        texts,
+        embeddings,
+        # persist_directory=PERSIST_DIRECTORY,
+        client_settings=CHROMA_SETTINGS,
+    )
+    db.persist()
+    db = None
+    
+
+
+if __name__ == "__main__":
+    main()
