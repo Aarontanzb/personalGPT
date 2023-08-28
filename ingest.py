@@ -11,6 +11,7 @@ from langchain.document_loaders import (
     UnstructuredWordDocumentLoader,
 )
 
+from constants import (PERSIST_DIRECTORY, SOURCE_DIRECTORY)
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceEmbeddings
@@ -32,12 +33,12 @@ LOADER_MAPPING = {
 
 
 
-# Load all documents from the source_documents folder
+# Load all documents from the source_documents folder and split into chunks
 def process_documents():
-    source_folder = "source_documents"
     documents = []
-    for file in os.listdir(source_folder):
-        file_path = os.path.join(source_folder, file)
+    print(f"Processing documents from {SOURCE_DIRECTORY}")
+    for file in os.listdir(SOURCE_DIRECTORY):
+        file_path = os.path.join(SOURCE_DIRECTORY, file)
         file_extension = os.path.splitext(file_path)[1]
         if file_extension in LOADER_MAPPING:
             loader_cls, loader_kwargs = LOADER_MAPPING[file_extension]
@@ -46,10 +47,13 @@ def process_documents():
             documents.extend(loaded_documents)
         else:
             print(f"Skipping {file_path} as it has no loader")
-    
+    print(f"Loaded {len(documents)} documents")
+
     # Split documents into chunks
+    print(f"Splitting documents into chunks")
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     texts = text_splitter.split_documents(documents)
+    print(f"Split into {len(texts)} chunks")
     return texts
 
 
@@ -63,7 +67,7 @@ def main():
     db = Chroma.from_documents(
         texts,
         embeddings,
-        # persist_directory=PERSIST_DIRECTORY,
+        persist_directory=PERSIST_DIRECTORY,
         client_settings=CHROMA_SETTINGS,
     )
     db.persist()
