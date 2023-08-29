@@ -1,4 +1,5 @@
 import os
+import torch
 
 from langchain.document_loaders import (
     CSVLoader,
@@ -64,6 +65,7 @@ def main():
     
     texts = process_documents()
 
+    print(f"Creating embeddings. May take some minutes...")
     db = Chroma.from_documents(
         texts,
         embeddings,
@@ -73,7 +75,7 @@ def main():
     db.persist()
     db = None
     
-
+    print(f"Ingestion complete. You can run queries on personalGPT now!")
 
 if __name__ == "__main__":
     main()
