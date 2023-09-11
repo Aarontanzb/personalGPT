@@ -58,6 +58,7 @@ def process_documents():
     return texts
 
 
+
 # Create embeddings for all documents
 def main():
     embeddings = HuggingFaceEmbeddings(model_name="hkunlp/instructor-xl",
