@@ -2,7 +2,32 @@ from langchain.chains import RetrievalQA
 from langchain.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceInstructEmbeddings
 from langchain.llms import HuggingFacePipeline
-from constants import CHROMA_SETTINGS, SOURCE_DIRECTORY, PERSIST_DIRECTORY
+from constants import CHROMA_SETTINGS, PERSIST_DIRECTORY
+from transformers import LlamaTokenizer, LlamaForCausalLM, pipeline
+
+def load_model():
+    '''
+    download Llama model for the first run. 
+    Subsequent runs will use the downloaded model.
+    '''
+    model_id = "TheBloke/Llama-2-7b-Chat-GGUF"
+    tokenizer = LlamaTokenizer.from_pretrained(model_id)
+
+    model = LlamaForCausalLM.from_pretrained(model_id)
+
+    hf_pipe = pipeline(
+        "text-generation",
+        model=model, 
+        tokenizer=tokenizer, 
+        max_length=2048,
+        temperature=0,
+        top_p=0.75,
+        repetition_penalty=1.15
+    )
+
+    local_llm = HuggingFacePipeline(pipeline=hf_pipe)
+
+    return local_llm
 
 
 def main():
