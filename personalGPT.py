@@ -10,10 +10,10 @@ def load_model():
     download Llama model for the first run. 
     Subsequent runs will use the downloaded model.
     '''
-    model_id = "TheBloke/Llama-2-7b-Chat-GGUF"
-    tokenizer = LlamaTokenizer.from_pretrained(model_id)
+    model_id = "TheBloke/Llama-2-7b-Chat-GPTQ"
 
-    model = LlamaForCausalLM.from_pretrained(model_id)
+    tokenizer = LlamaTokenizer.from_pretrained(model_id, cache_dir="./models/")
+    model = LlamaForCausalLM.from_pretrained(model_id, cache_dir="./models/")
 
     hf_pipe = pipeline(
         "text-generation",
@@ -40,7 +40,28 @@ def main():
     # load the LLM for generating Natural Language responses. 
     llm = load_model()
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents=True)
+    # Interactive questions and answers
+    while True:
+        query = input("\nEnter a query: ")
+        if query == "exit":
+            break
+        
+        # Get the answer from the chain
+        res = qa(query)    
+        answer, docs = res['result'], res['source_documents']
 
+        # Print the result
+        print("\n\n> Question:")
+        print(query)
+        print("\n> Answer:")
+        print(answer)
+        
+        # # Print the relevant sources used for the answer
+        print("----------------------------------SOURCE DOCUMENTS---------------------------")
+        for document in docs:
+            print("\n> " + document.metadata["source"] + ":")
+            print(document.page_content)
+        print("----------------------------------SOURCE DOCUMENTS---------------------------")
 
 if __name__ == "__main__":
     main()
