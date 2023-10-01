@@ -1,34 +1,34 @@
 from langchain.chains import RetrievalQA
 from langchain.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceInstructEmbeddings
-from langchain.llms import HuggingFacePipeline
+from langchain.llms import HuggingFacePipeline, LlamaCpp
 from constants import CHROMA_SETTINGS, PERSIST_DIRECTORY
 from transformers import LlamaTokenizer, LlamaForCausalLM, pipeline
+from huggingface_hub import hf_hub_download
+from constants import MODELS_PATH
 
-def load_model():
+MODEL_ID = "TheBloke/Llama-2-7b-Chat-GGUF"
+MODEL_BASENAME = "llama-2-7b-chat.Q4_K_M.gguf"
+
+def load_model(model_id=MODEL_ID, model_basename=MODEL_BASENAME):
     '''
-    download Llama model for the first run. 
+    download model for the first run. 
     Subsequent runs will use the downloaded model.
     '''
-    model_id = "TheBloke/Llama-2-7b-Chat-GPTQ"
+    model_path = hf_hub_download(
+            repo_id=model_id,
+            filename=model_basename,
+            resume_download=True,
+            cache_dir=MODELS_PATH,
+        )
+    kwargs = {
+            "model_path": model_path,
+            "n_ctx": 4096,
+            "max_tokens": 4096,
+            "n_batch": 512,
+        }
 
-    tokenizer = LlamaTokenizer.from_pretrained(model_id, cache_dir="./models/")
-    model = LlamaForCausalLM.from_pretrained(model_id, cache_dir="./models/")
-
-    hf_pipe = pipeline(
-        "text-generation",
-        model=model, 
-        tokenizer=tokenizer, 
-        max_length=2048,
-        temperature=0,
-        top_p=0.75,
-        repetition_penalty=1.15
-    )
-
-    local_llm = HuggingFacePipeline(pipeline=hf_pipe)
-
-    return local_llm
-
+    return LlamaCpp(**kwargs)
 
 def main():
     # load the instructorEmbeddings
@@ -38,7 +38,7 @@ def main():
     db = Chroma(persist_directory=PERSIST_DIRECTORY, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
     retriever = db.as_retriever()
     # load the LLM for generating Natural Language responses. 
-    llm = load_model()
+    llm = load_model(model_id=MODEL_ID, model_basename=MODEL_BASENAME)
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents=True)
     # Interactive questions and answers
     while True:
